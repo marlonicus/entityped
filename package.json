@@ -7,7 +7,15 @@
   "scripts": {
     "build": "tsc"
   },
-  "dependencies": {
+  "bin": {
+    "entityped-init": "dist/init.js",
+    "create-component": "dist/create-component.js"
+  },
+  "devDependencies": {
+    "@types/node": "^13.1.4",
     "typescript": "^3.7.4"
+  },
+  "dependencies": {
+    "promptly": "^3.0.3"
   }
 }
