@@ -6,5 +6,6 @@
     "outDir": "./dist",
     "lib": ["dom", "esnext"]
   },
-  "include": ["src/*.ts"]
+  "include": ["src/*.ts"],
+  "exclude": ["src/entityped.ts"]
 }

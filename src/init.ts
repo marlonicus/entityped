@@ -19,13 +19,14 @@ const cwd = process.cwd();
 
     const config = {
         typesFile,
-        componentsFolder
+        componentsFolder: path.dirname(componentsFolder)
     };
 
     // Create config file
     await fs.writeFile(path.resolve(cwd, CONFIG_FILE), JSON.stringify(config, null, 2));
 
     // Create base types file
+    await fs.mkdir(path.resolve(cwd, path.dirname(typesFile)), { recursive: true });
     await fs.copyFile(path.resolve(__dirname, `../templates/types.ts`), path.resolve(cwd, typesFile));
 
     console.log("---\nEntitype init complete :)")

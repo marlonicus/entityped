@@ -9,7 +9,7 @@
   },
   "bin": {
     "entityped-init": "dist/init.js",
-    "create-component": "dist/create-component.js"
+    "entityped-component": "dist/create-component.js"
   },
   "devDependencies": {
     "@types/node": "^13.1.4",
