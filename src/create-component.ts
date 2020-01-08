@@ -28,6 +28,18 @@ const toCamelCase = (str: string) => str.replace(/(?:^\w|[A-Z]|\b\w)/g, function
 
 const addNameToTemplate = (template: string, name: string) => template.replace(/@name@/gi, `"${toCamelCase(name)}"`);
 
+const appendStringAt = (original: string, insertion: string, target: string) => {
+    const position = original.indexOf(target);
+
+    if (position !== -1) {
+        const positionWithTarget = position + target.length;
+        return original.substr(0, positionWithTarget) + "\n" + insertion + original.substr(positionWithTarget);
+    }
+
+    console.error("Cannot correctly update entityped.ts, it may have been edited or removed.");
+    process.exit(1);
+}
+
 (async () => {
     console.log("Entityped - Create Component\n---\n");
 
@@ -44,14 +56,15 @@ const addNameToTemplate = (template: string, name: string) => template.replace(/
 
     const name = await prompt("Component name? (eg. render, weapon, rigid-body..):");
     const componentTemplate = await fs.readFile(path.resolve(__dirname, `../templates/component.ts`), "utf-8");
-
     const componentFolderName = toKebabCase(name);
+    const pascalName = toPascalCase(name)
+    const componentPath = path.resolve(cwd, config.componentsFolder, componentFolderName, "index.ts");
 
     // Create components directory (if it doesn't exist already)
     await fs.mkdir(path.resolve(cwd, config.componentsFolder, componentFolderName), { recursive: true });
 
     // Write new component file
-    await fs.writeFile(path.resolve(cwd, config.componentsFolder, componentFolderName, "index.ts"), addNameToTemplate(componentTemplate, name));
+    await fs.writeFile(componentPath, addNameToTemplate(componentTemplate, name));
 
     // Load users type file
     try {
@@ -62,7 +75,13 @@ const addNameToTemplate = (template: string, name: string) => template.replace(/
         process.exit(1);
     }
 
-    console.log(types)
+    const typesPath = path.resolve(cwd, path.dirname(config.typesFile));
+    types = appendStringAt(types, `import * as ${pascalName} from "${path.relative(typesPath, path.dirname(componentPath))}";`, "@entityped-component-imports@");
+    types = appendStringAt(types, `    ${name}?: ${pascalName}.TState;`, "@entityped-component-state-map@");
+    types = appendStringAt(types, `    ${pascalName}: ComponentInit<${pascalName}.TInit>;`, "@entityped-component-types@");
+    types = appendStringAt(types, `    ${pascalName},`, "@entityped-components@");
+
+    await fs.writeFile(path.resolve(cwd, config.typesFile), types);
 
     console.log("---\nEntitype component created!")
 })()

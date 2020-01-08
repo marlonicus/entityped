@@ -19,7 +19,7 @@ const cwd = process.cwd();
 
     const config = {
         typesFile,
-        componentsFolder: path.dirname(componentsFolder)
+        componentsFolder
     };
 
     // Create config file

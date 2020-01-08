@@ -1,3 +1,8 @@
+/**
+ * This file is auto-generated and shouldn't be edited manually.
+ * (... or at the very least don't piss around with the @...@ comments)
+ */
+
 import { TComponentInitialised } from "entityped";
 
 // @entityped-component-imports@
