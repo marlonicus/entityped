@@ -40,6 +40,14 @@ const appendStringAt = (original: string, insertion: string, target: string) => 
     process.exit(1);
 }
 
+// Node's path.relative won't return us a ./ if the files are on the same level
+// which isn't great convention for importing js modules. See: https://github.com/jonschlinkert/relative/issues/7
+const fixRelativeImportPath = (_path: string) => {
+    if (_path.substr(0, 3) != '../')
+        _path = './' + _path
+    return _path;
+}
+
 (async () => {
     console.log("Entityped - Create Component\n---\n");
 
@@ -76,7 +84,8 @@ const appendStringAt = (original: string, insertion: string, target: string) => 
     }
 
     const typesPath = path.resolve(cwd, path.dirname(config.typesFile));
-    types = appendStringAt(types, `import * as ${pascalName} from "${path.relative(typesPath, path.dirname(componentPath))}";`, "@entityped-component-imports@");
+    const importPath = fixRelativeImportPath(path.relative(typesPath, path.dirname(componentPath)));
+    types = appendStringAt(types, `import * as ${pascalName} from "${importPath}";`, "@entityped-component-imports@");
     types = appendStringAt(types, `    ${name}?: ${pascalName}.TState;`, "@entityped-component-state-map@");
     types = appendStringAt(types, `    ${pascalName}: ComponentInit<${pascalName}.TInit>;`, "@entityped-component-types@");
     types = appendStringAt(types, `    ${pascalName},`, "@entityped-components@");
