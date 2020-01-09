@@ -4,7 +4,7 @@ import { prompt } from "promptly";
 const { promises: fs } = require("fs");
 const path = require("path");
 
-const CONFIG_FILE = "entitypedConfig.json";
+const CONFIG_FILE = "entitypedconfig.json";
 const TYPES_FILE_DEFAULT = "src/entityped.ts";
 const COMPONENTS_FOLDER_DEFAULT = "src/components/";
 const cwd = process.cwd();

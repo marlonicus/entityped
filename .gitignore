@@ -1,4 +1,5 @@
 dist/
 node_modules/
-entitypedConfig.json
+entitypedconfig.json
 test-src
+.cache

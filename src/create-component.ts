@@ -4,7 +4,7 @@ import { prompt } from "promptly";
 const { promises: fs } = require("fs");
 const path = require("path");
 
-const CONFIG_FILE = "entitypedConfig.json";
+const CONFIG_FILE = "entitypedconfig.json";
 const cwd = process.cwd();
 
 const COMPONENT_IDENTIFIERS = {
@@ -58,7 +58,7 @@ const fixRelativeImportPath = (_path: string) => {
         config = JSON.parse(await fs.readFile(path.resolve(cwd, CONFIG_FILE), "utf-8"));
     } catch (err) {
         console.error(`Error: Could not find entityped config in ${cwd}.`)
-        console.info(`You can run entityped-init to generate a new entitypedConfig.json.`);
+        console.info(`You can run entityped-init to generate a new entitypedconfig.json.`);
         process.exit(1);
     }
 

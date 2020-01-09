@@ -1,0 +1,5 @@
+// tsconfig.json
+// assuming your ts sources are in ./src/
+{
+  "include": ["src/**/*"]
+}
