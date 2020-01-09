@@ -44,7 +44,7 @@ type TEntityCreation<ComponentMap> = (
     init: TEntityCreationProps
 ) => TEntity<ComponentMap>;
 
-type TEntity<ComponentMap> = {
+export type TEntity<ComponentMap> = {
     readonly components: ComponentMap;
     readonly id: string;
 
