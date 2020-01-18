@@ -65,7 +65,7 @@ const fixRelativeImportPath = (_path: string) => {
     const name = await prompt("Component name? (eg. render, weapon, rigid-body..):");
     const componentTemplate = await fs.readFile(path.resolve(__dirname, `../templates/component.ts`), "utf-8");
     const componentFolderName = toKebabCase(name);
-    const pascalName = toPascalCase(name)
+    const pascalName = `${toPascalCase(name)}Component`;
     const componentPath = path.resolve(cwd, config.componentsFolder, componentFolderName, "index.ts");
 
     // Create components directory (if it doesn't exist already)
@@ -85,10 +85,10 @@ const fixRelativeImportPath = (_path: string) => {
 
     const typesPath = path.resolve(cwd, path.dirname(config.typesFile));
     const importPath = fixRelativeImportPath(path.relative(typesPath, path.dirname(componentPath)));
-    types = appendStringAt(types, `import * as ${pascalName} from "${importPath}";`, "@entityped-component-imports@");
-    types = appendStringAt(types, `    ${name}?: ${pascalName}.TState;`, "@entityped-component-state-map@");
-    types = appendStringAt(types, `    ${pascalName}: ComponentInit<${pascalName}.TInit>;`, "@entityped-component-types@");
-    types = appendStringAt(types, `    ${pascalName},`, "@entityped-components@");
+    types = appendStringAt(types, `import * as ${pascalName} from "${importPath}";`, COMPONENT_IDENTIFIERS.imports);
+    types = appendStringAt(types, `    ${name}?: ${pascalName}.TState;`, COMPONENT_IDENTIFIERS.stateMap);
+    types = appendStringAt(types, `    ${pascalName}: ComponentInit<${pascalName}.TInit>;`, COMPONENT_IDENTIFIERS.types);
+    types = appendStringAt(types, `    ${pascalName},`, COMPONENT_IDENTIFIERS.components);
 
     await fs.writeFile(path.resolve(cwd, config.typesFile), types);
 
