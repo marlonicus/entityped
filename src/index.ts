@@ -1,7 +1,9 @@
 // UUID
 
+import { isArray } from "util";
+
 export const uuid = (): string => {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
     var r = (Math.random() * 16) | 0,
       v = c == "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
@@ -30,7 +32,7 @@ export const Component = <TInit, TReturn>(
   get name() {
     return name;
   },
-  value: fn(props)
+  value: fn(props),
 });
 
 // Entity
@@ -57,12 +59,12 @@ export type TEntity<ComponentMap> = {
 const createEntity = <ComponentMap>() => {
   const Entity: TEntityCreation<ComponentMap> = ({
     id = uuid(),
-    components: initialComponents = []
+    components: initialComponents = [],
   }) => {
     const components: ComponentMap = initialComponents.reduce(
       (prev, curr) => ({
         ...prev,
-        [curr.name]: curr.value
+        [curr.name]: curr.value,
       }),
       {}
     ) as ComponentMap;
@@ -84,7 +86,7 @@ const createEntity = <ComponentMap>() => {
         delete components[name];
       },
 
-      hasComponent: name => {
+      hasComponent: (name) => {
         return !!components[name];
       },
 
@@ -93,13 +95,13 @@ const createEntity = <ComponentMap>() => {
           JSON.stringify(
             {
               id,
-              components
+              components,
             },
             null,
             2
           )
         );
-      }
+      },
     };
   };
   return Entity;
@@ -113,7 +115,23 @@ export type TEntityMap<ComponentMap> = {
 
 type TSystemUpdate<ComponentMap, Inject> = ({
   entities,
-  inject
+  inject,
+}: {
+  entities: TEntityMap<ComponentMap>;
+  inject?: Inject;
+}) => void;
+
+type TSystemInit<ComponentMap, Inject> = ({
+  entities,
+  inject,
+}: {
+  entities: TEntityMap<ComponentMap>;
+  inject?: Inject;
+}) => void;
+
+type TSystemDestroy<ComponentMap, Inject> = ({
+  inject,
+  entities,
 }: {
   entities: TEntityMap<ComponentMap>;
   inject?: Inject;
@@ -122,30 +140,40 @@ type TSystemUpdate<ComponentMap, Inject> = ({
 type TSystem<ComponentMap, Inject = null> = {
   readonly name: string;
   readonly inject?: Inject;
+  enabled: boolean;
   update: TSystemUpdate<ComponentMap, Inject>;
+  init?: TSystemInit<ComponentMap, Inject>;
+  destroy: TSystemDestroy<ComponentMap, Inject>;
 };
 
 type TSystemCreationProps<ComponentMap, Inject> = {
   name: string;
   update: TSystemUpdate<ComponentMap, Inject>;
+  init?: TSystemInit<ComponentMap, Inject>;
   inject?: Inject;
+  destroy?: TSystemDestroy<ComponentMap, Inject>;
 };
 
 const createSystem = <ComponentMap>() => {
   return <Inject>({
     name,
     inject,
-    update
+    init,
+    update,
+    destroy,
   }: TSystemCreationProps<ComponentMap, Inject>): TSystem<
     ComponentMap,
     Inject
   > => {
     return {
+      enabled: false,
       update,
+      init,
+      destroy: destroy || ((() => {}) as TSystemDestroy<ComponentMap, Inject>),
       inject: inject as Inject,
       get name() {
         return name;
-      }
+      },
     } as TSystem<ComponentMap, Inject>;
   };
 };
@@ -178,10 +206,15 @@ type TEngine<ComponentMap, ComponentTypes> = {
   ) => TSystem<ComponentMap, Inject>;
   Components: ComponentTypes;
 
-  addSystem: (system: TSystem<ComponentMap, any>) => void;
+  registerSystem: (system: TSystem<ComponentMap, any>) => void;
+  enableSystem: (
+    system: TSystem<ComponentMap, any> | TSystem<ComponentMap, any>[]
+  ) => void;
   addEntity: (entity: TEntity<ComponentMap>) => void;
   removeEntityById: (id: string) => void;
-  removeSystem: (name: string) => void;
+  disableSystem: (
+    system: TSystem<ComponentMap, any> | TSystem<ComponentMap, any>[]
+  ) => void;
 
   entityById: (id: string) => TEntity<ComponentMap>;
 
@@ -189,7 +222,7 @@ type TEngine<ComponentMap, ComponentTypes> = {
     id,
     include,
     exclude,
-    excludeIds
+    excludeIds,
   }: {
     id?: string | false;
     include?: (keyof ComponentMap)[];
@@ -210,7 +243,7 @@ type TEngine<ComponentMap, ComponentTypes> = {
 type TSubscriptions = Record<string, TSubscriptionHandler[]>;
 
 export const Engine = <ComponentMap, ComponentTypes>({
-  Components
+  Components,
 }): TEngine<ComponentMap, ComponentTypes> => {
   const entities: TEntityMap<ComponentMap> = {};
   const systems: TSystem<ComponentMap>[] = [];
@@ -222,24 +255,53 @@ export const Engine = <ComponentMap, ComponentTypes>({
     System: createSystem<ComponentMap>(),
     Components: Components as ComponentTypes,
 
-    addSystem: system => systems.push(system),
-    addEntity: entity => (entities[entity.id] = entity),
-    removeEntityById: id => delete entities[id],
-    removeSystem: name => {
-      for (let i = systems.length - 1; i > 0; i--) {
-        if (systems[i].name === name) {
-          systems.splice(i, 1);
-          break;
+    registerSystem: (system) => {
+      systems.push(system);
+    },
+    enableSystem: (systemsToEnable) => {
+      if (!isArray(systemsToEnable)) {
+        systemsToEnable = [systemsToEnable];
+      }
+
+      for (let i = 0; i < systemsToEnable.length; i++) {
+        const targetSystem = systems.find(
+          ({ name }) => name === systemsToEnable[i].name
+        );
+        if (!targetSystem) {
+          console.warn("Tried to enable unregistered system: ", name);
+          continue;
         }
+        targetSystem.init &&
+          targetSystem.init({ inject: targetSystem.inject, entities });
+        targetSystem.enabled = true;
+      }
+    },
+    disableSystem: (systemsToDisable) => {
+      if (!isArray(systemsToDisable)) {
+        systemsToDisable = [systemsToDisable];
+      }
+      for (let i = 0; i < systemsToDisable.length; i++) {
+        const targetSystem = systems.find(
+          ({ name }) => name === systemsToDisable[i].name
+        );
+        if (!targetSystem) {
+          console.warn("Tried to disable unregistered system: ", name);
+          continue;
+        }
+        targetSystem.destroy({ inject: targetSystem.inject, entities });
+        targetSystem.enabled = false;
       }
     },
 
-    entityById: id => entities[id],
+    addEntity: (entity) => (entities[entity.id] = entity),
+    removeEntityById: (id) => delete entities[id],
+
+    entityById: (id) => entities[id],
 
     entityQuery: ({ include = [], exclude = [], excludeIds = [] }) => {
       const withoutExcludedIds = filterObj(
         entities,
-        entity => !excludeIds.includes(entity.id)
+        (entity) => !excludeIds.includes(entity.id)
       );
 
       return filterObj(withoutExcludedIds, ({ components }) => {
@@ -277,7 +339,7 @@ export const Engine = <ComponentMap, ComponentTypes>({
     },
 
     // Adds an action to be called at the start of the next system update cycle
-    queueAction: fn => {
+    queueAction: (fn) => {
       actionQueue.push(fn);
     },
 
@@ -290,29 +352,28 @@ export const Engine = <ComponentMap, ComponentTypes>({
       }
 
       for (let i = 0; i < systems.length; i++) {
-        systems[i].update({
-          entities,
-          inject: systems[i].inject
-        });
+        if (systems[i].enabled) {
+          systems[i].update({
+            entities,
+            inject: systems[i].inject,
+          });
+        }
       }
     },
 
     toString: () =>
       JSON.stringify({
-        entities
+        entities,
       }),
 
     debug: () => {
-      console.log(
-        JSON.stringify(
-          {
-            entities,
-            systems: systems.map(x => x.name)
-          },
-          null,
-          2
-        )
-      );
-    }
+      console.log({
+        entities,
+        systems: systems.map(({ name, enabled }) => ({
+          name,
+          enabled,
+        })),
+      });
+    },
   };
 };
